@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+        id="com.polaris.riderx.bluetoothClassic"
+        version="3.0">
+
+    <name>BluetoothDongle</name>
+
+    <description>
+        allows communication with bluetooth classic devices
+    </description>
+
+    <license>MIT</license>
+
+    <engines>
+        <engine name="cordova" version=">=3.0.0"/>
+    </engines>
+
+    <js-module src="www/BluetoothDongle.js" name="BluetoothDongle">
+        <clobbers target="window.plugins.BluetoothDongle" />
+    </js-module>
+
+    <!-- ios -->
+    <platform name="ios">
+
+        <config-file target="config.xml" parent="/*">
+            <feature name="BluetoothDongle">
+                <param name="ios-package" value="BluetoothDongle"/>
+            </feature>
+        </config-file>
+        <framework src="ExternalAccessory.framework" weak="true" />
+        <header-file src="src/ios/BluetoothDongle.h"/>
+        <source-file src="src/ios/BluetoothDongle.m"/>
+    </platform>
+
+</plugin>
