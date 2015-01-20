@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
-        id="com.polaris.riderx.bluetoothClassic"
+        id="com.strykeout.bluetoothClassic"
         version="3.0">
 
     <name>BluetoothDongle</name>
