@@ -9,5 +9,5 @@
     </author>
     <content src="index.html" />
     <access origin="*" />
-	<plugin name="BluetoothDongle" value="com.polaris.riderx.bluetoothClassic" />
+	<plugin name="BluetoothDongle" value="com.Strykeout.bluetoothClassic" />
 </widget>
