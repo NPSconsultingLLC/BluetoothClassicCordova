@@ -5,9 +5,9 @@
 //  Copyright (c) 2014 Nathan Stryker. All rights reserved.
 //
 
-#import "BTConnectionManager.h"
+#import "BluetoothDongle.h"
 
-@interface BTConnectionManager()
+@interface BluetoothDongle()
 
 @property (nonatomic, strong) NSString *messageString;
 @property (nonatomic, strong) NSString *buffer;
@@ -16,7 +16,7 @@
 
 @end
 
-@implementation BTConnectionManager
+@implementation BluetoothDongle
 
 #define EAD_INPUT_BUFFER_SIZE 4096
 
