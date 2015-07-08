@@ -5,22 +5,45 @@
 //  Copyright (c) 2014 Nathan Stryker. All rights reserved.
 //
 
-#import "BluetoothDongle.h"
+#import "BluetoothSerial.h"
 
-@interface BluetoothDongle()
+@interface BluetoothSerial()
 
-@property (nonatomic, strong) NSString *messageString;
-@property (nonatomic, strong) NSString *buffer;
-@property (nonatomic, strong) NSMutableArray *messageArray;
-@property (nonatomic, readonly) NSString *protocolString;
+@property (nonatomic, strong) EASession             *session;
+@property (nonatomic, strong) NSMutableData         *readData;
+@property (nonatomic, strong) NSMutableData         *writeData;
+@property (nonatomic, strong) EAAccessory           *accessory;
+@property (nonatomic, strong) NSMutableArray        *accessoriesList;
+@property (nonatomic, strong) NSMutableString       *concatString;
+@property (nonatomic, strong) CDVInvokedUrlCommand  *sessionCommand;
+@property (nonatomic, strong) CDVInvokedUrlCommand  *reflashCommand;
+@property (nonatomic)         NSUInteger             offset;
+@property (nonatomic)         NSInteger              dataLength;
+@property (nonatomic)         NSInteger              percentComplete;
+@property (nonatomic)         BOOL                   isReflashing;
 
 @end
 
-@implementation BluetoothDongle
+@implementation BluetoothSerial
 
-#define EAD_INPUT_BUFFER_SIZE 4096
+#define EAD_INPUT_BUFFER_SIZE 2048
 
-#pragma mark reader code
+- (void)accessoryConnected:(NSNotification *)notification
+{
+    
+    NSLog(@"EAController::accessoryConnected");
+    //return data string from Connected device.
+    
+    if(!_session){
+        [self openSessionForProtocol:@"com.uk.tsl.rfid"];
+    }
+}
+
+- (void)accessoryDisconnected:(NSNotification *)notification{
+    NSLog(@"accessory disconnected");
+    [self closeSession:nil];
+}
+
 // low level read method - read data while there is data and space available in the input buffer
 - (void)readReceivedData{
     
@@ -36,51 +59,25 @@
         [_readData appendBytes:(void *)buf length:bytesRead];
     }
     
+    CDVPluginResult *pluginResult = nil;
+    
     uint8_t *s = (uint8_t*)self.readData.bytes;
     
-    NSString *dataString = [[NSString alloc] init];
+    NSString *debugString = [[NSString alloc] init];
     
     for(unsigned int i = 0; i < _readData.length; i++){
-        dataString = [dataString stringByAppendingFormat:@"%02x", s[i]];
-        dataString = [dataString stringByAppendingFormat:@" "];
+        debugString = [debugString stringByAppendingFormat:@"%02x", s[i]];
+        debugString = [debugString stringByAppendingFormat:@""];
     }
-    //NSLog(@"------Message String %@", debugString);
+
+    NSString* newStr = [[NSString alloc] initWithData:_readData encoding:NSUTF8StringEncoding];
+    NSLog(@"read data = %@", newStr);
+    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:debugString];
+    pluginResult.keepCallback = [NSNumber numberWithBool:YES];
     
-    [self parseDataStream:dataString];
-    
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:_sessionCommand.callbackId];
     _readData = nil;
     
-}
-
-#pragma mark Public Methods
-// open a session with the accessory and set up the input and output stream on the default run loop
-- (BOOL)openSession{
-    
-    _buffer = [[NSString alloc] init];
-    
-    if(_session){
-        [self closeSession];
-    }
-    
-    //input your own protocol string
-    [self openSessionForProtocol:@""];
-    
-    if(!_session){
-        return NO;
-    }else{
-        //BT Connected start session
-        return YES;
-        
-    }
-}
-
-// initialize the accessory with the protocolString
-- (void)setupControllerForAccessory:(EAAccessory *)accessory withProtocolString:(NSString *)protocolString
-{
-    
-    _accessory = accessory;
-    
-    _protocolString = [protocolString copy];
 }
 
 - (EASession *)openSessionForProtocol:(NSString *)protocolString{
@@ -111,12 +108,145 @@
         }
     }
     
+    CDVPluginResult *pluginResult = nil;
+    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+    
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:_sessionCommand.callbackId];
+    
+    
     return _session;
 }
 
-// close the session with the accessory.
-- (void)closeSession
+// Handle communications from the streams.
+- (void)stream:(NSStream*)theStream handleEvent:(NSStreamEvent)streamEvent
 {
+    
+    switch (streamEvent)
+    {
+        case NSStreamEventHasBytesAvailable:
+            // Process the incoming stream data.
+            [self readReceivedData];
+            break;
+            
+        case NSStreamEventHasSpaceAvailable:
+            
+            break;
+            
+        case NSStreamEventEndEncountered:
+            break;
+        default:
+            break;
+    }
+    
+}
+
+#pragma mark method calls for hybrid app
+
+//get the currently connected devices.
+- (void)list:(CDVInvokedUrlCommand *)command{
+    
+    _accessoriesList = [[NSMutableArray alloc] initWithArray:[[EAAccessoryManager sharedAccessoryManager] connectedAccessories]];
+    CDVPluginResult *pluginResult = nil;
+    
+    NSMutableArray *dictArray = [[NSMutableArray alloc] init];
+    
+    for(int i = 0; i < [_accessoriesList count]; i++){
+        EAAccessory *accessory = [_accessoriesList objectAtIndex:i];
+        NSMutableDictionary *accessoryDict = [[NSMutableDictionary alloc] init];
+        
+        [accessoryDict setValue:[NSNumber numberWithBool:accessory.connected] forKeyPath:@"connected"];
+        [accessoryDict setValue:[NSNumber numberWithLong:accessory.connectionID] forKeyPath:@"connectionID"];
+        [accessoryDict setValue:accessory.name forKey:@"name"];
+        [accessoryDict setValue:accessory.manufacturer forKeyPath:@"manufacturer"];
+        [accessoryDict setValue:accessory.modelNumber forKeyPath:@"modelNumber"];
+        [accessoryDict setValue:accessory.serialNumber forKeyPath:@"serialNumber"];
+        [accessoryDict setValue:accessory.firmwareRevision forKeyPath:@"firmwareRevision"];
+        [accessoryDict setValue:accessory.hardwareRevision forKeyPath:@"hardwareRevision"];
+        [accessoryDict setValue:accessory.protocolStrings forKeyPath:@"protocols"];
+        
+        [dictArray insertObject:accessoryDict atIndex:i];
+    }
+    
+    if(_accessoriesList > 0){
+        NSArray *array = [NSArray arrayWithArray:dictArray];
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsArray:array];
+    }else{
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR];
+    }
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+    
+}
+
+//call to connect to a bluetooth device
+- (void)connect:(CDVInvokedUrlCommand *)command{
+    
+    if(_session){
+        [self closeSession:nil];
+    }
+    
+    _concatString = [[NSMutableString alloc] init];
+    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(accessoryConnected:) name:EAAccessoryDidConnectNotification object:nil];
+    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(accessoryDisconnected:) name:EAAccessoryDidDisconnectNotification object:nil];
+    [[EAAccessoryManager sharedAccessoryManager] registerForLocalNotifications];
+    
+    
+    //return data string from Connected device.
+    _sessionCommand = [[CDVInvokedUrlCommand alloc] init];
+    _sessionCommand = command;
+    
+    [self openSessionForProtocol:@"com.uk.tsl.rfid"];
+}
+
+//call to disconnect to bt device
+- (void)disconnect:(CDVInvokedUrlCommand *)command{
+    _sessionCommand = [[CDVInvokedUrlCommand alloc] init];
+    _sessionCommand = command;
+    
+    [self closeSession:command];
+    
+    CDVPluginResult *pluginResult = nil;
+    
+    pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+    
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+//return connection status
+- (void)isConnected:(CDVInvokedUrlCommand*)command{
+    
+    _accessoriesList = [[NSMutableArray alloc] initWithArray:[[EAAccessoryManager sharedAccessoryManager] connectedAccessories]];
+    CDVPluginResult *pluginResult = nil;
+    
+    if(_accessoriesList >0 && _session){
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR];
+    }else{
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR];
+        
+    }
+    
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+//subscribe to data stream
+- (void)subscribe:(CDVInvokedUrlCommand *)command{
+    
+    [[EAAccessoryManager sharedAccessoryManager] registerForLocalNotifications];
+    
+    //return data string from Connected device.
+    _sessionCommand = [[CDVInvokedUrlCommand alloc] init];
+    _sessionCommand = command;
+    
+    if(_session){
+        [[_session outputStream] open];
+        
+    }else{
+        //no data available.
+    }
+    
+}
+
+// close the session with the accessory.
+- (void)closeSession:(CDVInvokedUrlCommand *)command{
+    
     [[_session inputStream] close];
     [[_session inputStream] removeFromRunLoop:[NSRunLoop currentRunLoop] forMode:NSDefaultRunLoopMode];
     [[_session inputStream] setDelegate:nil];
@@ -125,57 +255,27 @@
     [[_session outputStream] setDelegate:nil];
     
     _session = nil;
-    _writeData = nil;
     _readData = nil;
 }
 
-+ (BTConnectionManager *)sharedController
-{
-    static BTConnectionManager *sessionController = nil;
-    if (sessionController == nil) {
-        sessionController = [[BTConnectionManager alloc] init];
-    }
+//send request to
+-(void)write:(CDVInvokedUrlCommand *)command{
+
+    CDVPluginResult *pluginResult = nil;
     
-    return sessionController;
+//    while (([[_session outputStream] hasSpaceAvailable])){
+//        
+//        NSInteger bytesWritten = [[_session outputStream] write:[prepareData bytes] maxLength:[prepareData length]];
+//        
+//        if (bytesWritten <= 0 ){
+//            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR];
+//            break;
+//        }
+//        else if (bytesWritten > 0){
+//            [_writeData replaceBytesInRange:NSMakeRange(0, bytesWritten) withBytes:NULL length:0];
+//            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+//        }
+//    }
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
-
-- (BOOL)isConnected{
-    //check the connection status and return the value
-    //to detect if a connection exists
-    
-    return NO;
-}
-
-#pragma mark stream eventws
-// asynchronous NSStream handleEvent method
-- (void)stream:(NSStream *)aStream handleEvent:(NSStreamEvent)eventCode
-{
-    switch (eventCode) {
-        case NSStreamEventNone:
-            break;
-        case NSStreamEventOpenCompleted:
-            break;
-        case NSStreamEventHasBytesAvailable:
-            [self readReceivedData];
-            break;
-        case NSStreamEventHasSpaceAvailable:
-            //[self _writeData];
-            break;
-        case NSStreamEventErrorOccurred:
-            break;
-        case NSStreamEventEndEncountered:
-            break;
-        default:
-            break;
-    }
-}
-
--(void)parseDataStream:(NSString *)dataString {
-    
-//parse your data here. 
-    
-    
-}
-
-
 @end
