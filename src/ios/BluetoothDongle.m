@@ -27,6 +27,7 @@
 @implementation BluetoothSerial
 
 #define EAD_INPUT_BUFFER_SIZE 2048
+#define GLOBAL_PROTOCOL_STRING @"com.uk.tsl.rfid"
 
 - (void)accessoryConnected:(NSNotification *)notification
 {
@@ -35,7 +36,7 @@
     //return data string from Connected device.
     
     if(!_session){
-        [self openSessionForProtocol:@"com.uk.tsl.rfid"];
+        [self openSessionForProtocol:GLOBAL_PROTOCOL_STRING];
     }
 }
 
@@ -194,7 +195,7 @@
     _sessionCommand = [[CDVInvokedUrlCommand alloc] init];
     _sessionCommand = command;
     
-    [self openSessionForProtocol:@"com.uk.tsl.rfid"];
+    [self openSessionForProtocol:GLOBAL_PROTOCOL_STRING];
 }
 
 //call to disconnect to bt device
@@ -278,4 +279,6 @@
 //    }
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
+
+
 @end
