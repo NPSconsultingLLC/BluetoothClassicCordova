@@ -10,7 +10,7 @@
 #import <ExternalAccessory/ExternalAccessory.h>
 #import <Cordova/CDVPlugin.h>
 
-@interface BluetoothDongle : CDVPlugin <EAAccessoryDelegate, NSStreamDelegate>
+@interface BluetoothSerial : CDVPlugin <EAAccessoryDelegate, NSStreamDelegate>
 
 //get the currently connected devices.
 - (void)list:(CDVInvokedUrlCommand *)command;
@@ -27,16 +27,7 @@
 //Returns indicating if we are connected to a BT device
 - (void)isConnected:(CDVInvokedUrlCommand*)command;
 
-//get dongle version
--(void)version:(CDVInvokedUrlCommand *)command;
-
 //subscribe to data stream
 - (void)subscribe:(CDVInvokedUrlCommand *)command;
 
-//reflash the dongle with a new firmware
-- (void)reflash:(CDVInvokedUrlCommand *)command;
-
 @end
-
-
-
