@@ -5,9 +5,9 @@
 //  Copyright (c) 2014 Nathan Stryker. All rights reserved.
 //
 
-#import "BluetoothSerial.h"
+#import "BluetoothDongle.h"
 
-@interface BluetoothSerial()
+@interface BluetoothDongle()
 
 @property (nonatomic, strong) EASession             *session;
 @property (nonatomic, strong) NSMutableData         *readData;
@@ -24,7 +24,7 @@
 
 @end
 
-@implementation BluetoothSerial
+@implementation BluetoothDongle
 
 #define EAD_INPUT_BUFFER_SIZE 2048
 #define GLOBAL_PROTOCOL_STRING @"com.uk.tsl.rfid"
