@@ -10,7 +10,7 @@
 #import <ExternalAccessory/ExternalAccessory.h>
 #import <Cordova/CDVPlugin.h>
 
-@interface BluetoothSerial : CDVPlugin <EAAccessoryDelegate, NSStreamDelegate>
+@interface BluetoothDongle : CDVPlugin <EAAccessoryDelegate, NSStreamDelegate>
 
 //get the currently connected devices.
 - (void)list:(CDVInvokedUrlCommand *)command;
