@@ -27,7 +27,8 @@
 @implementation BluetoothDongle
 
 #define EAD_INPUT_BUFFER_SIZE 2048
-#define GLOBAL_PROTOCOL_STRING @"com.uk.tsl.rfid"
+
+#define GLOBAL_PROTOCOL_STRING @//Enter your protocol string here, wrapped in ""'s 
 
 - (void)accessoryConnected:(NSNotification *)notification
 {
@@ -155,6 +156,7 @@
         EAAccessory *accessory = [_accessoriesList objectAtIndex:i];
         NSMutableDictionary *accessoryDict = [[NSMutableDictionary alloc] init];
         
+        //These objects will be different based on your accessories protocol dictionaries. 
         [accessoryDict setValue:[NSNumber numberWithBool:accessory.connected] forKeyPath:@"connected"];
         [accessoryDict setValue:[NSNumber numberWithLong:accessory.connectionID] forKeyPath:@"connectionID"];
         [accessoryDict setValue:accessory.name forKey:@"name"];
@@ -263,20 +265,7 @@
 -(void)write:(CDVInvokedUrlCommand *)command{
 
     CDVPluginResult *pluginResult = nil;
-    
-//    while (([[_session outputStream] hasSpaceAvailable])){
-//        
-//        NSInteger bytesWritten = [[_session outputStream] write:[prepareData bytes] maxLength:[prepareData length]];
-//        
-//        if (bytesWritten <= 0 ){
-//            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR];
-//            break;
-//        }
-//        else if (bytesWritten > 0){
-//            [_writeData replaceBytesInRange:NSMakeRange(0, bytesWritten) withBytes:NULL length:0];
-//            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-//        }
-//    }
+
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
