@@ -12,6 +12,7 @@ module.exports = {
     },
 	
 	/**
+	adding a new comment for the sake of adding a comment 
 	 * Connects to a bluetooth device
 	 * @param {string} id The identifier of the device to connect to
 	 * @param {function} success A function called when connection succeeds
